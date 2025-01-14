@@ -16,13 +16,12 @@ function App() {
 
   const uploadFile = async (file) => {
     try {
-      // Ensure the file object has necessary properties
       if (!(file instanceof File)) {
         console.error("Invalid file object passed:", file);
         throw new Error("Invalid file object passed to uploadFile.");
       }
 
-      console.log("Uploading file:", file); // Log the valid file object
+      console.log("Uploading file:", file);
 
       setUploadStatus((prev) => ({ ...prev, [file.name]: "uploading" }));
 
@@ -50,7 +49,7 @@ function App() {
   };
 
   const onDrop = useCallback((acceptedFiles) => {
-    const filesArray = Array.from(acceptedFiles); // Convert to array
+    const filesArray = Array.from(acceptedFiles); 
     console.log("Accepted Files:", filesArray);
   
     const newFiles = filesArray.map((file) => ({
@@ -59,7 +58,6 @@ function App() {
     }));
     setFiles(newFiles);
   
-    // Upload each file using the original `File` object
     filesArray.forEach((file) => {
       uploadFile(file).catch(console.error);
     });
@@ -84,8 +82,8 @@ function App() {
   };
 
   const handleFileInput = (e) => {
-    const files = e.target.files; // This is a FileList
-    onDrop(files); // Pass to onDrop for further processing
+    const files = e.target.files; 
+    onDrop(files); 
   };
   
   const getStatusBadge = (fileName) => {
