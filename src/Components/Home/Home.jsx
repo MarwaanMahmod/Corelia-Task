@@ -1,21 +1,71 @@
+//using API
+
 import React, { useState, useCallback } from "react";
 import { FileText, Upload, FileImage } from "lucide-react";
+import axios from "axios";
 import logo from "../../images/Corelia.png";
 
 
-function Home() {
+function App() {
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState({});
+  const [extractedData, setExtractedData] = useState(null);
+
+  const API_BASE_URL = "http://41.33.149.211:1331";
+
+  const uploadFile = async (file) => {
+    try {
+      // Ensure the file object has necessary properties
+      if (!(file instanceof File)) {
+        console.error("Invalid file object passed:", file);
+        throw new Error("Invalid file object passed to uploadFile.");
+      }
+
+      console.log("Uploading file:", file); // Log the valid file object
+
+      setUploadStatus((prev) => ({ ...prev, [file.name]: "uploading" }));
+
+      const formData = new FormData();
+      formData.append("docs", file);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/v1/ocr?doc_type=ocr&lang=auto`,
+        formData
+      );
+
+      setUploadStatus((prev) => ({ ...prev, [file.name]: "completed" }));
+      setExtractedData(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Upload error:", error);
+
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+      }
+
+      setUploadStatus((prev) => ({ ...prev, [file.name]: "error" }));
+      throw error;
+    }
+  };
 
   const onDrop = useCallback((acceptedFiles) => {
-    if (acceptedFiles) {
-      const newFiles = Array.from(acceptedFiles).map((file) => ({
-        ...file,
-        preview: URL.createObjectURL(file),
-      }));
-      setFiles(newFiles);
-    }
+    const filesArray = Array.from(acceptedFiles); // Convert to array
+    console.log("Accepted Files:", filesArray);
+  
+    const newFiles = filesArray.map((file) => ({
+      ...file,
+      preview: URL.createObjectURL(file),
+    }));
+    setFiles(newFiles);
+  
+    // Upload each file using the original `File` object
+    filesArray.forEach((file) => {
+      uploadFile(file).catch(console.error);
+    });
   }, []);
+  
+  
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -34,21 +84,42 @@ function Home() {
   };
 
   const handleFileInput = (e) => {
-    onDrop(e.target.files);
+    const files = e.target.files; // This is a FileList
+    onDrop(files); // Pass to onDrop for further processing
+  };
+  
+  const getStatusBadge = (fileName) => {
+    const status = uploadStatus[fileName];
+    switch (status) {
+      case "uploading":
+        return <span className="ms-auto badge bg-warning">Uploading...</span>;
+      case "completed":
+        return <span className="ms-auto badge bg-success">Processed</span>;
+      case "error":
+        return <span className="ms-auto badge bg-danger">Error</span>;
+      default:
+        return <span className="ms-auto badge bg-secondary">Pending</span>;
+    }
   };
 
-  const handleExportResults = () => {
-    files.forEach((file) => {
+  const handleExport = () => {
+    if (extractedData) {
+      const blob = new Blob([JSON.stringify(extractedData, null, 2)], {
+        type: "application/json",
+      });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = file.preview;
-      link.download = file.name;
+      link.href = url;
+      link.setAttribute("download", "extracted_data.json");
+      document.body.appendChild(link);
       link.click();
-    });
+      link.remove();
+    }
   };
 
   return (
-    <div className="container-fluid vh-100 bg-light">
-      <nav className="navbar navbar-light bg-white shadow">
+    <div className="container-fluid min-vh-100 bg-light">
+ <nav className="navbar navbar-light bg-white shadow">
         <div className="container d-flex justify-content-between align-items-cente">
           <a className="navbar-brand d-flex align-items-center" href="/">
             <img
@@ -78,14 +149,15 @@ function Home() {
                 <h5 className="mb-0">Extracted Data</h5>
                 <button
                   className="btn btn-primary"
-                  onClick={handleExportResults}
+                  onClick={handleExport}
+                  disabled={!extractedData}
                 >
                   Export Results <FileText size={16} className="ms-2" />
                 </button>
               </div>
-              <div className="card-body text-center py-5">
-                {files.length === 0 ? (
-                  <div className="text-muted">
+              <div className="card-body">
+                {!extractedData ? (
+                  <div className="text-center py-5 text-muted">
                     <FileText
                       size={48}
                       className="mb-3 mx-auto d-block opacity-50"
@@ -93,18 +165,16 @@ function Home() {
                     <p>Upload a document to see extracted data</p>
                   </div>
                 ) : (
-                  <div>
-                    {files.map((file, index) => (
-                      <div key={index} className="mb-3">
-                        <img
-                          src={file.preview}
-                          alt={file.name}
-                          className="img-fluid mb-2"
-                          style={{ maxHeight: "200px" }}
-                        />
-                        <p className="mb-0">{file.name}</p>
-                      </div>
-                    ))}
+                  <div className="bg-light p-4 rounded">
+                    <pre
+                      className="mb-0"
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {JSON.stringify(extractedData, null, 2)}
+                    </pre>
                   </div>
                 )}
               </div>
@@ -162,9 +232,7 @@ function Home() {
                       >
                         <FileImage size={20} className="me-2" />
                         <span>{file.name}</span>
-                        <span className="ms-auto badge bg-success">
-                          Processed
-                        </span>
+                        {getStatusBadge(file.name)}
                       </div>
                     ))}
                   </div>
@@ -178,4 +246,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default App;
