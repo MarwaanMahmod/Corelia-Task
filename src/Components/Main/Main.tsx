@@ -1,28 +1,29 @@
-//With API
-
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, DragEvent, ChangeEvent } from "react";
 import { FileText, Upload, FileImage } from "lucide-react";
 import axios from "axios";
 import logo from "../../images/Corelia.png";
 
 
-function App() {
-  const [files, setFiles] = useState([]);
+interface FileWithPreview extends File {
+  preview: string;
+}
+
+type UploadStatus = 'uploading' | 'completed' | 'error' | 'pending';
+
+interface FileStatus {
+  [key: string]: UploadStatus;
+}
+
+function Home() {
+  const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState({});
-  const [extractedData, setExtractedData] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState<FileStatus>({});
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   const API_BASE_URL = "http://41.33.149.211:1331";
 
-  const uploadFile = async (file) => {
+  const uploadFile = async (file: File) => {
     try {
-      if (!(file instanceof File)) {
-        console.error("Invalid file object passed:", file);
-        throw new Error("Invalid file object passed to uploadFile.");
-      }
-
-      console.log("Uploading file:", file);
-
       setUploadStatus((prev) => ({ ...prev, [file.name]: "uploading" }));
 
       const formData = new FormData();
@@ -38,55 +39,48 @@ function App() {
       return response.data;
     } catch (error) {
       console.error("Upload error:", error);
-
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-      }
-
       setUploadStatus((prev) => ({ ...prev, [file.name]: "error" }));
       throw error;
     }
   };
 
-  const onDrop = useCallback((acceptedFiles) => {
-    const filesArray = Array.from(acceptedFiles); 
-    console.log("Accepted Files:", filesArray);
-  
+  const onDrop = useCallback((acceptedFiles: FileList | File[]) => {
+    const filesArray = Array.from(acceptedFiles);
     const newFiles = filesArray.map((file) => ({
       ...file,
       preview: URL.createObjectURL(file),
-    }));
+    } as FileWithPreview));
     setFiles(newFiles);
-  
+
     filesArray.forEach((file) => {
       uploadFile(file).catch(console.error);
     });
   }, []);
-  
-  
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     onDrop(e.dataTransfer.files);
   };
 
-  const handleFileInput = (e) => {
-    const files = e.target.files; 
-    onDrop(files); 
+  const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      onDrop(files);
+    }
   };
-  
-  const getStatusBadge = (fileName) => {
+
+  const getStatusBadge = (fileName: string) => {
     const status = uploadStatus[fileName];
     switch (status) {
       case "uploading":
@@ -117,7 +111,7 @@ function App() {
 
   return (
     <div className="container-fluid min-vh-100 bg-light">
- <nav className="navbar navbar-light bg-white shadow">
+      <nav className="navbar navbar-light bg-white shadow">
         <div className="container d-flex justify-content-between align-items-cente">
           <a className="navbar-brand d-flex align-items-center" href="/">
             <img
@@ -156,20 +150,14 @@ function App() {
               <div className="card-body">
                 {!extractedData ? (
                   <div className="text-center py-5 text-muted">
-                    <FileText
-                      size={48}
-                      className="mb-3 mx-auto d-block opacity-50"
-                    />
+                    <FileText size={48} className="mb-3 mx-auto d-block opacity-50" />
                     <p>Upload a document to see extracted data</p>
                   </div>
                 ) : (
                   <div className="bg-light p-4 rounded">
                     <pre
                       className="mb-0"
-                      style={{
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
+                      style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
                     >
                       {JSON.stringify(extractedData, null, 2)}
                     </pre>
@@ -186,9 +174,8 @@ function App() {
               </div>
               <div className="card-body">
                 <div
-                  className={`upload-area border-2 border-dashed rounded-3 p-5 text-center ${
-                    isDragging ? "border-primary bg-light" : ""
-                  }`}
+                  className={`upload-area border-2 border-dashed rounded-3 p-5 text-center ${isDragging ? "border-primary bg-light" : ""
+                    }`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
@@ -244,4 +231,4 @@ function App() {
   );
 }
 
-export default App;
+export default Home;

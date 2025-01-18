@@ -4,12 +4,14 @@ import './index.css';
 // import App from './App';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import reportWebVitals from './reportWebVitals';
-import Home from './Components/Home/Home';
+import Main from './Components/Main/Main.tsx';
+import Home from './Components/Home/Home.jsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <Home/>
+    <Main/>
+    {/* <Home/> */}
   </React.StrictMode>
 );
 
